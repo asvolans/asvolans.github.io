@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script src="http://d3js.org/d3.v5.min.js"></script>
+<style>
+
+    header {
+        background: #4CAF50;
+        color: white;
+        padding: 1rem 0;
+        text-align: center;
+    }
+    .container {
+        width: 80%;
+        margin: 0 auto;
+        padding: 1rem 0;
+    }
+
+
+    h2 {
+        border-bottom: 2px solid #4CAF50;
+        padding-bottom: 0.5rem;
+    }
+
+    footer {
+        background: #f4f4f4;
+        color: #333;
+        text-align: center;
+        padding: 1rem 0;
+        border-top: 1px solid #ddd;
+    }
+
+    .indicator-section {
+        background: white;
+        margin-bottom: 2rem;
+    }
+
+
+</style>
+<head>
+    <title>Global Economic Landscape 2021</title>
+</head>
+<body onload='init()'>
+<header id="title">
+    <h1>2021 Global Economic Insights</h1>
+</header>
+
+<div class="container">
+    <section class="content-section" id="summary"> </section>
+    <h2>&nbsp</h2>
+
+    <label >Choose the development indicator that you would like to learn more about:</label>
+    <select name="eco_ind" id="eco_ind" onchange="loadDevelopmentIndicator()" >
+        <option value="">--Please select the indicator--</option>
+        <option value="cpindex">Consumer Price Index</option>
+<!--        <option value="mortailty">Mortality Rate</option>-->
+        <option value="le_birth">Life Expectancy</option>
+<!--        <option value="emp_pop_ratio">Employment to Population Ratio</option>-->
+        <option value="uemp">Unemployment Rate Measure</option>
+    </select>
+    <h2>&nbsp</h2>
+    <section class="indicator-section" id="indicator_section">
+        <table>
+            <tr>
+                <td>
+                    <div id = "indicator_detail"></div>
+                </td>
+                <td>
+                    <div id = "indicator_chart">
+<!--                        <svg id ="svg_indicator_chart"></svg>-->
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </section>
+
+</div>
+</body>
+<script>
+    var cdata;
+    var chartColor;
+
+    async function init() {
+        var i=0;
+        var telem;
+        var search_values=location.search.replace('\?','').split('&');
+        var query={}
+        for(i=0;i<search_values.length;i++){
+            telem=search_values[i].split('=');
+            query[telem[0]]=telem[1];
+        }
+        var country = query.name;
+        cmap = loadCountryMap(country);
+        cdata = await d3.csv(cmap.get("cdata"));
+        chartColor = cmap.get("chartcolor");
+        console.log(cdata)
+        indicators = document.getElementById("eco_ind");
+
+        d3.select("#title").html("<h1>2021 Global Economic Insights: " + country + "</h1>");
+        d3.select("#summary").html(cmap.get("summary"));
+    }
+
+    function loadDevelopmentIndicator(){
+        ind_val =indicators.value;
+        console.log(ind_val);
+        attrmap = loadDetailMap(ind_val);
+        d3.select("#indicator_detail").html(attrmap.get("detail"));
+        loadLineChart(cdata,attrmap,chartColor);
+//
+    }
+
+    function loadLineChart(cdata,attrmap, chartColor) {
+        console.log("Create Line Chart for " + attrmap.get("attrname") + "  Color:" + chartColor);
+        var attr = attrmap.get("attrname");
+        maxval = Number(attrmap.get("domain_max"))
+        ydecdomain=[0, maxval]
+        ydecrange=[0,400]
+        ydecscale = d3.scaleLinear().domain(ydecdomain).range(ydecrange);
+        ydecscaleaxis = d3.scaleLinear().domain(ydecdomain).range([400,0]);
+
+        xdeclabels=[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021];
+        xdecdomain=[0,22];
+        xdecscale = d3.scaleLinear().domain(xdecdomain).range([0,800]);
+
+        console.log(d3.select("#indicator_chart").select("svg").remove());
+
+        d3.select("#indicator_chart")
+            .append("svg")
+            // .id("svg_indicator_chart")
+            .attr("width", 900)
+            .attr("height", 500)
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .call(d3.axisLeft(ydecscaleaxis)
+                // .tickFormat(function (d,i){
+                //     return d/1000 + "K";
+                // }
+                // )
+            );
+
+        d3.select("#indicator_chart")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(15,330)")
+            .append("text")
+            // .attr("transform","translate(20, 235)")
+            .attr("transform", "rotate(-90)")
+            .attr("fill", "black")
+            .style("font", "14px times")
+            .style("font-weight", "bold")
+            .attr("font-family", "Saira")
+            .text(attrmap.get("ylabel"));
+
+        d3.select("#indicator_chart")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(50,450)")
+            .call(d3.axisBottom(xdecscale)
+                .ticks(22)
+                .tickFormat(function (d,i){
+                    console.log(i);
+                    return xdeclabels[i]}))
+            .append("text")
+            .attr("transform","translate(400, 35)")
+            .attr("fill", "black")
+            .attr("font-family", "Saira")
+            .style("font", "14px times")
+            .style("font-weight", "bold")
+            .text("Year");
+
+        d3.select("#indicator_chart")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .selectAll("circle")
+            .data(cdata)
+            .enter()
+            .append("circle")
+            .attr("cx", function(d,i){
+               return xdecscale(i);
+            })
+            .attr("cy", function(d){
+                        if (attr=="consumer_price_index"){
+                            return 400-ydecscale(d.consumer_price_index);
+                        }else if (attr=="le_birth"){
+                            return 400-ydecscale(d.le_birth);
+                        }else if (attr=="uemp"){
+                            return 400-ydecscale(d.uemp);
+                        }
+                    }
+            )
+            .attr("r",3)
+            .style("fill",chartColor);
+             const line = d3.line()
+            .x(d => xdecscale(d.index))
+            .y(function(d){
+                if (attr=="consumer_price_index"){
+                    return 400-ydecscale(d.consumer_price_index);
+                }else if (attr=="le_birth"){
+                    return 400-ydecscale(d.le_birth);
+                }else if (attr=="uemp"){
+                    return 400-ydecscale(d.uemp);
+                }
+            });
+            // .y(d => 400-ydecscale(d.consumer_price_index));
+
+
+        d3.select("#indicator_chart")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .append("path")
+            .datum(cdata)
+            .attr("fill","none")
+            .attr("stroke",chartColor)
+            .attr("stroke-width", 2)
+            .attr("d",line);
+
+
+
+    }
+
+
+
+
+    function loadDetailMap(indicator){
+        var cpmap = d3.map({
+                            "detail":"<h2> Consumer Price Index </h2>" +
+                                    "<p>" +
+                                    "The Consumer Price Index (CPI) is a vital economic indicator that measures the average change over time in the prices paid by urban consumers for a market basket of consumer goods and services. Here’s a detailed explanation:\n" +
+                                    "<br><br><b>Definition:</b><br>" +
+                                    "Consumer Price Index (CPI): An index that examines the weighted average of prices of a basket of consumer goods and services, such as transportation, food, and medical care. It is calculated by taking price changes for each item in the predetermined basket of goods and averaging them.\n" +
+                                    "<br><br><b>Purpose:</b><br>" +
+                                    "<u>Measure Inflation:</u>CPI is primarily used to measure inflation, which is the rate at which the general level of prices for goods and services rises, eroding purchasing power.\n" +
+                                    "<br><u>Economic Indicator:</u> It serves as a key indicator of the economic health of a country, reflecting changes in the cost of living.\n" +
+                                    "<br><u>Policy Making:</u> Governments and central banks use CPI data to make economic policy decisions, including setting interest rates.\n" +
+                                    "<br><u>Adjust Wages and Pensions:</u> It is also used to adjust wages, pensions, and other contracts to maintain the purchasing power of the population."
+                                    + "</p>"
+                                ,
+                                "attrname":"consumer_price_index",
+                                "ylabel":"Consumer Price Index",
+                                "domain_max":200,
+                                "chartcolor":"green"});
+
+
+        var lemap = d3.map({
+            "detail":"<h2> Life Expectancy </h2>" +
+                "<p>" +
+                "Life expectancy is a statistical measure that estimates the average number of years a person can expect to live based on current mortality rates. It is a crucial indicator of the overall health and well-being of a population.Life expectancy is a vital statistic that provides insight into the health and quality of life of populations. It is influenced by a myriad of factors, including healthcare, lifestyle, socioeconomic conditions, and the environment. Understanding life expectancy helps in public health planning, economic forecasting, and assessing the overall progress of societies." +
+                "<br><br><b>Definition:</b><br>" +
+                "<u>Life Expectancy at Birth:</u><br> The average number of years a newborn is expected to live if current mortality rates remain constant throughout their lifetime." +
+                "<br><u>Life Expectancy at a Specific Age:</u><br> he average number of additional years a person of a given age can expect to live, assuming current mortality rates." +
+                + "</p>"
+            ,
+            "attrname":"le_birth",
+            "ylabel":"Life expectancy at birth, total (years)",
+            "domain_max":200
+            })
+
+
+        var uemp = d3.map({
+            "detail":"<h2> Unemployment Trend </h2>" +
+                "<p>" +
+                "The unemployment rate is a key economic indicator that measures the percentage of the labor force that is unemployed and actively seeking employment. It provides insight into the health of an economy, labor market conditions, and overall economic performance." +
+                "<br><br><b>Definition:</b><br>" +
+                "<u>Unemployed:</u><br> Individuals who are without a job, available to work, and actively seeking employment." +
+                "<br><u>Labor Force:</u><br> The total number of people employed and unemployed (actively seeking work)." +
+                + "</p>"
+            ,
+            "attrname":"uemp",
+            "ylabel":"Unemployment(% of total labor force) ",
+            "domain_max":20
+        })
+
+
+
+
+
+        if (indicator == "cpindex") {
+            console.log(cpmap)
+            return cpmap;
+        }else if (indicator == "le_birth") {
+            console.log(lemap)
+            return lemap;
+        }else if (indicator == "uemp") {
+            console.log(uemp)
+            return uemp;
+        }
+    }
+
+    function loadCountryMap(country){
+        var usamap = d3.map({
+                "summary":" <p>The United States is not only the largest economy in the world but also a benchmark for economic development and innovation. With a GDP of over $21 trillion, the US economy\n" +
+                    "            is a powerhouse driven by diverse sectors.\n" +
+                    "\n" +
+                    "            The services sector dominates the US economy, contributing approximately 77% to the GDP. This includes industries such as finance, real estate, healthcare, and information technology. Manufacturing, another significant sector, contributes around 18%, showcasing\n" +
+                    "            the country's industrial strength. Agriculture, though a smaller portion, remains vital, contributing about 5%.\n" +
+                    "\n" +
+                    "            <br><br><b>Major Industries:</b><br>\n" +
+                    "            The United States leads in several key industries. Silicon Valley symbolizes the technological innovation driving global advancements. Wall Street, the heart of the financial world, shapes global financial trends. The healthcare sector, including pharmaceutical giants, plays a critical role in global health. Hollywood and the entertainment industry continue to influence culture worldwide.\"\n" +
+                    "\n" +
+                    "            <br><br><b>Historical Growth:</b><br>\n" +
+                    "            Looking at the historical GDP growth, the United States has shown resilience and adaptability. Despite challenges, the economy has consistently grown, with notable periods of expansion and recovery from recessions.\"\n" +
+                    "        </p>"
+            ,
+            "cdata":"data\\USA.csv",
+            "chartcolor":"green"}
+
+        )
+
+        var chinamap = d3.map({
+                "summary":"<p>" +
+                    "This scene highlights China's rapid economic growth, key economic indicators, and major sectors contributing to its GDP. The focus is on understanding how China has transformed into the second-largest economy in the world and its influence on global markets." +
+                    "<br><br><b>Major Industries:</b><br>\n" +
+                    "China's major industries include manufacturing (e.g., electronics and textiles), technology (e.g., telecommunications and e-commerce), and infrastructure development (e.g., construction and railways)" +
+                    "<br><br><b>Historical Growth:</b><br>\n" +
+                    "China, with a GDP of around $14 trillion, has experienced unprecedented economic growth over the last few decades.As the world's most populous country, China has leveraged its large workforce, strong manufacturing base, and extensive infrastructure development to become a key player in the global economy."
+                    + "</p>"
+            ,
+            "cdata":"data\\China.csv",
+            "chartcolor":"red"}
+        )
+
+        var japanmap = d3.map({
+                "summary":"<p>" +
+                    "This scene focuses on Japan, emphasizing its economic strength, key indicators, and major sectors contributing to its GDP. It aims to provide insights into how Japan, with its technological advancements and precision manufacturing, stands as the third-largest economy in the world." +
+                    "<br><br><b>Major Industries:</b><br>\n" +
+                    "China's major industries include manufacturing (e.g., electronics and textiles), technology (e.g., telecommunications and e-commerce), and infrastructure development (e.g., construction and railways)" +
+                    "<br><br><b>Historical Growth:</b><br>\n" +
+                    "Japan, with a GDP of over $5 trillion, is renowned for its advanced technology and precision manufacturing.Despite its smaller geographical size and limited natural resources, Japan has leveraged its innovation, efficient production methods, and high-quality workforce to become a leading global economy."
+                    + "</p>"
+            ,
+            "cdata":"data\\Japan.csv",
+            "chartcolor":"brown"}
+        )
+
+        var germanymap = d3.map({
+                "summary":"<p>" +
+                    "This scene focuses on Germany, detailing its economic strength, key indicators, and major sectors contributing to its GDP. The aim is to provide a comprehensive understanding of why Germany is considered the largest economy in Europe and a global industrial powerhouse." +
+                    "<br><br><b>Major Industries:</b><br>\n" +
+                    "Germany's major industries include automotive manufacturing (e.g., Volkswagen, BMW), machinery and equipment (e.g., Siemens), and chemicals and pharmaceuticals (e.g., BASF, Bayer)" +
+                    "<br><br><b>Historical Growth:</b><br>\n" +
+                    "Germany, with a GDP of over $4 trillion, is the largest economy in Europe and the fourth-largest in the world.Renowned for its engineering prowess, Germany has built a robust economy characterized by advanced manufacturing, a strong export sector, and a highly skilled workforce"
+                    + "</p>"
+            ,
+            "cdata":"data\\Germany.csv",
+            "chartcolor":"blue"}
+        )
+
+        var indiamap = d3.map({
+                "summary":"<p>" +
+                    "his scene focuses on India, detailing its economic strength, key indicators, and major sectors contributing to its GDP. The aim is to provide a comprehensive understanding of why India is considered a rapidly growing economy with significant potential on the global stage" +
+                    "<br><br><b>Major Industries:</b><br>\n" +
+                    "India's major industries include information technology (e.g., TCS, Infosys), textiles and apparel, and agriculture (e.g., rice and wheat production" +
+                    "<br><br><b>Historical Growth:</b><br>\n" +
+                    "India, with a GDP of around $3 trillion, is the fifth-largest economy in the world and one of the fastest-growing major economies.With its vast and diverse population, India has leveraged its service sector, manufacturing, and agriculture to build a robust and dynamic economy."
+                    + "</p>"
+            ,
+            "cdata":"data\\India.csv",
+            "chartcolor":"orange"}
+        )
+
+        if (country == "USA") {
+            console.log(usamap)
+            return usamap;
+        }else if (country == "CHINA") {
+            return chinamap;
+        }else if (country == "JAPAN") {
+            return japanmap;
+        }else if (country == "GERMANY") {
+            return germanymap;
+        }else if (country == "INDIA") {
+            return indiamap;
+        }
+    }
+
+</script>
+<footer>
+
+    <p>&copy; 2021 Global Economic Insights</p>
+</footer>
+
+
+
+</html>
