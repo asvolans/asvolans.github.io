@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script src="http://d3js.org/d3.v5.min.js"></script>
+<style>
+    .country {fill:#ccc; stroke:#999;}
+
+    #tooltip{
+        opacity:0;
+        position: absolute;
+        text-align:left;
+        wisdth:60px;
+        height:40px;
+        background: white;
+        border:8px;
+        font-size: 10px;
+    }
+    header {
+        background: #4CAF50;
+        color: white;
+        padding: 1rem 0;
+        text-align: center;
+    }
+    .container {
+        width: 80%;
+        margin: 0 auto;
+        padding: 1rem 0;
+    }
+    /*.content-section {*/
+    /*    margin-bottom: 2rem;*/
+    /*}*/
+
+    h2 {
+        border-bottom: 2px solid #4CAF50;
+        padding-bottom: 0.5rem;
+    }
+    .highlight {
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .chart, .infographic {
+        width: 100%;
+        height: auto;
+        margin: 1rem 0;
+    }
+    .infographic img {
+        width: 100%;
+        height: auto;
+    }
+    footer {
+        background: #f4f4f4;
+        color: #333;
+        text-align: center;
+        padding: 1rem 0;
+        border-top: 1px solid #ddd;
+    }
+
+    .previous {
+        background-color: #f1f1f1;
+        color: black;
+    }
+
+    .next {
+        background-color: #04AA6D;
+        color: white;
+    }
+
+</style>
+<head>
+    <title>Global Economic Landscape 2021</title>
+</head>
+<body onload='init()'>
+    <header>
+        <h1>Global Economic Landscape</h1>
+    </header>
+
+    <div class="container">
+        <section class="content-section">
+            <h2>Global Economic Context</h2>
+            <p>The global economy in 2021 is characterized by diverse growth patterns, technological advancements, and shifting trade dynamics. Different regions contribute uniquely to the overall economic tapestry, influenced by factors such as resource availability, industrial capacity, and geopolitical stability. Understanding the global economic context helps in appreciating the significance of key players who drive this complex system.</p>
+            <div >
+                <table>
+                    <tr><td>
+                        <svg id="wmap" style="border:1px solid black"> </svg>
+                    </td>
+                        <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                    <td valign="top">
+                        <p >
+                            <h4>Definition of GDP:</h4>
+
+                            Text: "Gross Domestic Product (GDP) is the total market value of all finished goods and services produced within a country's borders in a specific time period."
+
+                            <br>
+                            <h4>Why GDP Matters:</h4>
+
+                            Text: "GDP is a crucial indicator of a country's economic health and provides insights into the size and performance of an economy. It influences policy decisions, investment strategies, and global economic rankings."
+
+                            <br>
+                            <h4>Purpose of This Analysis:</h4>
+
+                            Text: "This analysis aims to provide a comprehensive comparison of the top 3 economies in the world, focusing on their GDP, growth drivers, and economic challenges. Understanding these economies helps in grasping the global economic landscape and predicting future trends."
+                        </p>
+                    </td></tr>
+                </table>
+            </div>
+            <div id="tooltip">testing</div>
+            <div >**Hover on the country to see the GDP as of 2021</div>
+        </section>
+        <section class="content-section">
+            <h2>Dominant Economic Players</h2>
+            <div>
+                <a href="#" class="previous">&laquo; Previous</a>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <a href="usa.html" class="next">Next &raquo;</a>
+            </div>
+            <p>Among the multitude of economies, three countries stand out due to their substantial economic size and influence: the <span class="highlight">United States</span>, <span class="highlight">China</span>, and <span class="highlight">Japan</span>. These nations not only have the highest GDPs but also play pivotal roles in global trade, investment, and innovation.</p>
+            <div id="gdpcomp"></div>
+        </section>
+
+            <p><span class="highlight">United States:</span> The United States boasts the largest economy, driven by a robust technology sector, diverse industrial base, and significant financial services. Its GDP stands at $25 trillion.</p>
+            <p><span class="highlight">China:</span> China, the second-largest economy, is a global manufacturing hub with rapid advancements in technology and a significant agricultural sector. Its GDP is $18 trillion.</p>
+            <p><span class="highlight">Japan:</span> Japan, with its strong automotive and electronics industries, ranks third and is renowned for its technological innovations and precision manufacturing. Its GDP is $5 trillion.</p>
+
+            <p>The economic power of these three nations is evident in their GDP figures. Together, they represent a significant portion of the world's economic output, influencing global trade policies, investment flows, and economic trends.</p>
+
+        <section class="content-section">
+            <h2>Why These Economies Matter</h2>
+            <div>
+                <a href="eco_comp.html" class="next">Compare Economies &raquo;</a>
+            </div>
+            <p>Understanding the economic dynamics of the United States, China, and Japan is crucial for grasping broader global economic trends. In the following sections, we will delve deeper into the economic profiles of these countries, exploring their strengths, challenges, and future trajectories.</p>
+
+            <div id="gdpdecade"></div>
+
+        </section>
+    </div>
+    <footer>
+        <p>&copy; 2023 Global Economic Insights</p>
+    </footer>
+
+
+</body>
+
+<script>
+    async function init() {
+        const width = 900;
+        const height = 600;
+
+        var svg = d3.select("body").select('svg').attr("width", width).attr("height", height);
+        var sequentialScale = d3.scaleSequential()
+            .domain([0, 72000])
+            .interpolator(d3.interpolateGreens);
+
+        const projection = d3.geoMercator().scale(140).translate([width / 2, height / 1.4]);
+        const path = d3.geoPath(projection);
+
+        const g = svg.append("g");
+
+        var gdata = await d3.csv("data\\GDPPerCapita.csv");
+        // console.log(gdata);
+
+        var map = d3.map(gdata, function (d) {
+            return d.country;
+        });
+
+        var tooltip = d3.select("#tooltip");
+        const cf = d3.format(".2f");
+
+        d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+            .then(data => {
+                const countries = topojson.feature(data, data.objects.countries);
+                g.selectAll("path")
+                    .data(countries.features)
+                    .enter()
+                    .append("path")
+                    .attr('class', 'country')
+                    .attr("d", path)
+                    .style("fill", function (d) {
+                       if (map.get(d.properties.name) != null) {
+                            // console.log(map.get(d.properties.name).gdp);
+                            return sequentialScale(map.get(d.properties.name).gdp);
+                        }
+                        return "white";
+                    })
+                    .style("opacity", 0.5)
+                    .on("mouseover", function(d,i){
+                        d3.select(this)
+                                .transition()
+                                .duration(200)
+                                .style("opacity", 1);
+                        if (map.get(d.properties.name) != null) {
+                            tooltip.style("opacity", 1)
+                                .style("left", (d3.event.pageX) + "px")
+                                .style("top", (d3.event.pageY) + "px")
+                                .html("<b>Country:</b>" + d.properties.name +
+                                    "<br><b>GDP Per Capita(2021): </b>" + cf(map.get(d.properties.name).gdp) + "USD");
+                        }
+                    })
+                    .on("mouseout", function(d,i){
+                        d3.select(this)
+                            .transition()
+                            .duration(200)
+                            .style("opacity", 0.5);
+                        tooltip.style("opacity",0);
+                    });
+
+            });
+
+        var gdptop3 = await d3.csv("data\\GDPTop3.csv");
+        console.log(gdptop3);
+        ydomain=[0, 25];
+        ys =d3.scaleLinear().domain(ydomain).range([0,150]);
+        yst =d3.scaleLinear().domain(ydomain).range([150,0]);
+        //xs=d3.scaleBand().domain(["0","1","2"]).range([0,150]);
+
+        xdomain=[0,1,2]
+        xrange=[0,90]
+        xs = d3.scaleBand().domain(xdomain).range(xrange);
+
+        cdomain = [0,1,2];
+        crange = ["green","blue","orange"];
+        cs= d3.scaleLinear().domain(cdomain).range(crange);
+
+
+        d3.select("#gdpcomp").append("svg")
+            .attr("width", 150)
+            .attr("height",200)
+            .append("g")
+            .attr("transform","translate(50,50)")
+            .selectAll("rect")
+            .data(gdptop3)
+            .enter()
+            .append("rect")
+            .attr("x",function(d,i){console.log(xs(i)); return xs(i)})
+            .attr("y", function(d,i){console.log(d.gdp);return 150-ys(Number(d.gdp));})
+            .attr("width", function(d,i){return xs.bandwidth()})
+            .attr("height",function(d,i){console.log(ys(d.gdp));return ys(d.gdp)})
+            .style('fill',function(d,i) {console.log(cs(i));return cs(i);});
+
+        d3.select("#gdpcomp").select("svg")
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .call(d3.axisLeft(yst)
+                .tickValues([5,10,15,20,25]));
+
+        //
+        // tlabels = ["USA","CHN","JPN"];
+        // d3.select("#gdpcomp").select("svg")
+        //     .append("g")
+        //     .attr("transform", "translate(50,250)")
+        //     .call(d3.axisBottom(xs)
+        //         .tickValues(function(d,i){return tlables[i]}));
+
+
+
+
+
+        ydecdomain=[0, 75000]
+        ydecrange=[0,400]
+        ydecscale = d3.scaleLinear().domain(ydecdomain).range(ydecrange);
+        ydecscaleaxis = d3.scaleLinear().domain(ydecdomain).range([400,0]);
+
+        xdeclabels=[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021];
+        xdecdomain=[0,22];
+        xdecscale = d3.scaleLinear().domain(xdecdomain).range([0,800]);
+        console.log(xdecscale("2010"))
+
+
+        d3.select("#gdpdecade")
+            .append("svg")
+            .attr("width", 900)
+            .attr("height", 500)
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .call(d3.axisLeft(ydecscaleaxis));
+
+        d3.select("#gdpdecade")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(50,450)")
+            .call(d3.axisBottom(xdecscale)
+                .ticks(22)
+                .tickFormat(function (d,i){
+                    console.log(i);
+                    return xdeclabels[i]}));
+
+        var gdpUSA = await d3.csv("data\\USA.csv");
+        var gdp_color="green"
+        draw_gdp(gdpUSA,gdp_color);
+
+        var gdpChina = await d3.csv("data\\China.csv");
+        gdp_color="blue"
+        draw_gdp(gdpChina,gdp_color);
+
+        var gdpJapan = await d3.csv("data\\Japan.csv");
+        gdp_color="red"
+        draw_gdp(gdpJapan,gdp_color);
+
+        var gdpGermany = await d3.csv("data\\Germany.csv");
+        gdp_color="brown"
+        draw_gdp(gdpGermany,gdp_color);
+
+        var gdpIndia = await d3.csv("data\\India.csv");
+        gdp_color="orange"
+        draw_gdp(gdpIndia,gdp_color);
+
+
+        // console.log(gdpUSA);
+        //
+        //
+        // d3.select("#gdpdecade")
+        //     .select("svg")
+        //     .append("g")
+        //     .attr("transform", "translate(50,50)")
+        //     .selectAll("circle")
+        //     .data(gdpUSA)
+        //     .enter()
+        //     .append("circle")
+        //     .attr("cx", function(d,i){
+        //                             console.log(i);
+        //                             console.log(xdecscale(d.year));
+        //                             console.log("----------------------");
+        //                             return xdecscale(i);
+        //                             })
+        //     .attr("cy", function(d){
+        //                             console.log(d.gdp_per_capita);
+        //                             console.log(400-ydecscale(d.gdp_per_capita));
+        //                             console.log("***********")
+        //                             return 400-ydecscale(d.gdp_per_capita);
+        //                             })
+        //     .attr("r",3)
+        //     .style("fill","green");
+        //
+        //
+        // const line = d3.line()
+        //     .x(d => xdecscale(d.index))
+        //     .y(d => 400-ydecscale(d.gdp_per_capita));
+        //
+        // d3.select("#gdpdecade")
+        //     .select("svg")
+        //     .append("g")
+        //     .attr("transform", "translate(50,50)")
+        //     .append("path")
+        //     .datum(gdpUSA)
+        //     .attr("fill","none")
+        //     .attr("stroke","green")
+        //     .attr("stroke-width", 2)
+        //     .attr("d",line);
+        //
+
+
+
+
+    }
+
+    function draw_gdp(cdata, ccolor){
+        d3.select("#gdpdecade")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .selectAll("circle")
+            .data(cdata)
+            .enter()
+            .append("circle")
+            .attr("cx", function(d,i){
+                console.log(i);
+                console.log(xdecscale(d.year));
+                console.log("----------------------");
+                return xdecscale(i);
+            })
+            .attr("cy", function(d){
+                console.log(d.gdp_per_capita);
+                console.log(400-ydecscale(d.gdp_per_capita));
+                console.log("***********")
+                return 400-ydecscale(d.gdp_per_capita);
+            })
+            .attr("r",3)
+            .style("fill",ccolor);
+
+
+        const line = d3.line()
+            .x(d => xdecscale(d.index))
+            .y(d => 400-ydecscale(d.gdp_per_capita));
+
+        d3.select("#gdpdecade")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .append("path")
+            .datum(cdata)
+            .attr("fill","none")
+            .attr("stroke",ccolor)
+            .attr("stroke-width", 2)
+            .attr("d",line);
+
+
+    }
+
+</script>
+</html>
