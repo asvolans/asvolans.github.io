@@ -219,7 +219,8 @@
         var tooltip = d3.select("#tooltip");
         const cf = d3.format(".2f");
 
-        d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+        // d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+        d3.json("data//map.json")
             .then(data => {
                 const countries = topojson.feature(data, data.objects.countries);
                 g.selectAll("path")
@@ -313,6 +314,23 @@
             .attr("height",function(d,i){console.log(ys(d.gdp));return ys(d.gdp)})
             .style('fill',function(d,i) {console.log(d.color);return d.color;});
 
+
+        d3.select("#gdpcomp")
+            .select("svg")
+            .append("g")
+            .attr("transform", "translate(50,50)")
+            .selectAll(".label")
+            .data(gpdData)
+            .enter().append("text")
+            .attr("x", function (d,i) { return xs(i) + 5; })
+            .attr("y", function (d) { return 290-ys(Number(d.gdp)); })
+            .attr("dy", ".35em")
+            .style("font-family", "sans-serif")
+            .style("font-size", "10px")
+            .style("font-weight", "bold")
+            .style('fill', '#3c3d28')
+            .text(function (d) { return d.gdp + "T"; });
+
         d3.select("#gdpcomp")
             .select("svg")
             .append("g")
@@ -346,6 +364,9 @@
                 .tickFormat(function (d,i){
                     console.log(i);
                     return glabels[i]}));
+
+
+
 
 
     }
